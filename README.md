@@ -152,7 +152,7 @@ const data = {
 | withOuterLines          | boolean                 | Show outer dashed lines - default: True                                                                                                                                                                                        |
 | withVerticalLabels      | boolean                 | Show vertical labels - default: True                                                                                                                                                                                           |
 | withHorizontalLabels    | boolean                 | Show horizontal labels - default: True                                                                                                                                                                                         |
-| fromZero                | boolean                 | Render charts from 0 not from the minimum value. - default: False                                                                                                                                                              |
+| yStart                | boolean                 | Render charts from 0 not from the minimum value. - default: False                                                                                                                                                              |
 | yAxisLabel              | string                  | Prepend text to horizontal labels -- default: ''                                                                                                                                                                               |
 | yAxisSuffix             | string                  | Append text to horizontal labels -- default: ''                                                                                                                                                                                |
 | xAxisLabel              | string                  | Prepend text to vertical labels -- default: ''                                                                                                                                                                                 |
@@ -255,7 +255,7 @@ const data = {
 | height                  | Number          | Height of the chart                                                                         |
 | withVerticalLabels      | boolean         | Show vertical labels - default: True                                                        |
 | withHorizontalLabels    | boolean         | Show horizontal labels - default: True                                                      |
-| fromZero                | boolean         | Render charts from 0 not from the minimum value. - default: False                           |
+| yStart                | boolean         | Render charts from 0 not from the minimum value. - default: False                           |
 | withInnerLines          | boolean         | Show inner dashed lines - default: True                                                     |
 | yAxisLabel              | string          | Prepend text to horizontal labels -- default: ''                                            |
 | yAxisSuffix             | string          | Append text to horizontal labels -- default: ''                                             |

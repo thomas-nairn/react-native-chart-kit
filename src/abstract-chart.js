@@ -4,8 +4,8 @@ import { LinearGradient, Line, Text, Defs, Stop } from "react-native-svg";
 
 class AbstractChart extends Component {
   calcScaler = data => {
-    if (this.props.fromZero) {
-      return Math.max(...data, 0) - Math.min(...data, 0) || 1;
+    if (this.props.yStart != null) {
+      return Math.max(Math.max(...data), this.props.yStart) - Math.min(Math.min(...data), this.props.yStart) || 1;
     } else {
       return Math.max(...data) - Math.min(...data) || 1;
     }
@@ -25,17 +25,13 @@ class AbstractChart extends Component {
 
   calcHeight = (val, data, height) => {
     const max = Math.max(...data);
-    const min = Math.min(...data);
+    const min = this.props.yStart != null ? Math.min(Math.min(...data), this.props.yStart) : Math.min(...data);
     if (min < 0 && max > 0) {
       return height * (val / this.calcScaler(data));
     } else if (min >= 0 && max >= 0) {
-      return this.props.fromZero
-        ? height * (val / this.calcScaler(data))
-        : height * ((val - min) / this.calcScaler(data));
+      return height * ((val - min) / this.calcScaler(data));
     } else if (min < 0 && max <= 0) {
-      return this.props.fromZero
-        ? height * (val / this.calcScaler(data))
-        : height * ((val - max) / this.calcScaler(data));
+      return height * ((val - max) / this.calcScaler(data));
     }
   };
 
@@ -120,9 +116,7 @@ class AbstractChart extends Component {
           data[0].toFixed(decimalPlaces)
         )}${yAxisSuffix}`;
       } else {
-        const label = this.props.fromZero
-          ? (this.calcScaler(data) / count) * i + Math.min(...data, 0)
-          : (this.calcScaler(data) / count) * i + Math.min(...data);
+        const label = this.props.yStart != null ? (this.calcScaler(data) / count) * i + Math.min(Math.min(...data), this.props.yStart) : (this.calcScaler(data) / count) * i + Math.min(...data);
         yLabel = `${yAxisLabel}${formatYLabel(
           label.toFixed(decimalPlaces)
         )}${yAxisSuffix}`;
@@ -130,10 +124,7 @@ class AbstractChart extends Component {
 
       const basePosition = height - height / 4;
       const x = paddingRight - yLabelsOffset;
-      const y =
-        count === 1 && this.props.fromZero
-          ? paddingTop + 4
-          : (height * 3) / 4 - (basePosition / count) * i + paddingTop;
+      const y = (height * 3) / 4 - (basePosition / count) * i + paddingTop;
       return (
         <Text
           rotation={horizontalLabelRotation}
@@ -165,7 +156,7 @@ class AbstractChart extends Component {
     const {
       xAxisLabel = "",
       xLabelsOffset = 0,
-      hidePointsAtIndex = []
+      hidePointsAtIndex = {data: false, points: []}
     } = this.props;
     const fontSize = 12;
     let fac = 1;
@@ -173,7 +164,7 @@ class AbstractChart extends Component {
       fac = 0.71;
     }
     return labels.map((label, i) => {
-      if (hidePointsAtIndex.includes(i)) {
+      if (hidePointsAtIndex.points.includes(i)) {
         return null;
       }
       const x =

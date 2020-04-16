@@ -4,7 +4,8 @@ import {
   ScrollView,
   StyleSheet,
   Animated,
-  TextInput
+  TextInput,
+  Platform
 } from "react-native";
 import {
   Svg,
@@ -13,18 +14,22 @@ import {
   Polyline,
   Path,
   Rect,
-  G
+  G,
+  Line,
+  Text
 } from "react-native-svg";
 import AbstractChart from "../abstract-chart";
 import { LegendItem } from "./legend-item";
 
 let AnimatedCircle = Animated.createAnimatedComponent(Circle);
+let lastTouch = -999;
 
 class LineChart extends AbstractChart {
   label = React.createRef();
 
   state = {
-    scrollableDotHorizontalOffset: new Animated.Value(0)
+    scrollableDotHorizontalOffset: new Animated.Value(0),
+    drawIndicator: null
   };
 
   getColor = (dataset, opacity) => {
@@ -60,7 +65,7 @@ class LineChart extends AbstractChart {
     const baseHeight = this.calcBaseHeight(datas, height);
     const {
       getDotColor,
-      hidePointsAtIndex = [],
+      hidePointsAtIndex = {data: false, points: []},
       renderDotContent = () => {
         return null;
       }
@@ -70,7 +75,7 @@ class LineChart extends AbstractChart {
       if (dataset.withDots == false) return;
 
       dataset.data.forEach((x, i) => {
-        if (hidePointsAtIndex.includes(i)) {
+        if (hidePointsAtIndex.points.includes(i)) {
           return;
         }
         const cx =
@@ -79,7 +84,7 @@ class LineChart extends AbstractChart {
           ((baseHeight - this.calcHeight(x, datas, height)) / 4) * 3 +
           paddingTop;
         const onPress = () => {
-          if (!onDataPointClick || hidePointsAtIndex.includes(i)) {
+          if (!onDataPointClick) {
             return;
           }
 
@@ -308,6 +313,7 @@ class LineChart extends AbstractChart {
       return this.renderBezierShadow(config);
     }
 
+    const { hidePointsAtIndex = {data: false, points: []} } = this.props;
     const { data, width, height, paddingRight, paddingTop } = config;
     const datas = this.getDatas(data);
     const baseHeight = this.calcBaseHeight(datas, height);
@@ -318,14 +324,18 @@ class LineChart extends AbstractChart {
           points={
             dataset.data
               .map((d, i) => {
+                if (hidePointsAtIndex.data === true && hidePointsAtIndex.points.includes(i)) {
+                  return;
+                }
                 const x =
                   paddingRight +
                   (i * (width - paddingRight)) / dataset.data.length;
                 const y =
                   ((baseHeight - this.calcHeight(d, datas, height)) / 4) * 3 +
                   paddingTop;
+
                 return `${x},${y}`;
-              })
+              }).filter(p => p != null)
               .join(" ") +
             ` ${paddingRight +
               ((width - paddingRight) / dataset.data.length) *
@@ -344,6 +354,9 @@ class LineChart extends AbstractChart {
       return this.renderBezierLine(config);
     }
 
+    const { hidePointsAtIndex = {data: false, points: []} } = this.props;
+    this.pointCoor = [];
+
     const {
       width,
       height,
@@ -357,17 +370,22 @@ class LineChart extends AbstractChart {
     const baseHeight = this.calcBaseHeight(datas, height);
     data.forEach((dataset, index) => {
       const points = dataset.data.map((d, i) => {
+        if (hidePointsAtIndex.data === true && hidePointsAtIndex.points.includes(i)) {
+          return;
+        }
         const x =
           (i * (width - paddingRight)) / dataset.data.length + paddingRight;
         const y =
           ((baseHeight - this.calcHeight(d, datas, height)) / 4) * 3 +
           paddingTop;
+        this.pointCoor.push({x: x, y: y, i: i, d: d});
         return `${x},${y}`;
-      });
+      }).filter(p => p != null);
       output.push(
         <Polyline
           key={index}
           strokeLinejoin={linejoinType}
+          //onPress={this.onPress}
           points={points.join(" ")}
           fill="none"
           stroke={this.getColor(dataset, 0.2)}
@@ -465,6 +483,64 @@ class LineChart extends AbstractChart {
     ));
   };
 
+  renderIndicator = (height) => {
+    const { 
+      color = '#000000',
+      weight = 2,
+      enabled = false,
+      drawLabel = false,
+      xOffset = 5,
+      yOffset = 20,
+      fontSize = 14,
+      fontColor = '#000000',
+      fontFamily = 'system font'
+     } = this.props.indicator;
+
+    const { drawIndicator } = this.state;
+
+    if (enabled) {
+      if (drawIndicator != null) {
+        return (
+          <G>
+            <Line strokeWidth={weight} stroke={color} x1={drawIndicator.x} y1={0} x2={drawIndicator.x} y2={height}></Line>
+            {drawLabel ?             <Text 
+              origin={`${drawIndicator.x + xOffset} ${yOffset}`}
+              x={drawIndicator.x + xOffset}
+              y={yOffset}
+              fontSize={fontSize}
+              fontFamily={fontFamily}
+              fill={fontColor}
+            >
+              {`${drawIndicator.i}, ${drawIndicator.d}`}
+            </Text> : null}
+
+          </G>
+          
+        );
+      }
+      return null;
+    }
+  }
+
+  graphRelease = () => {
+    lastTouch = 0;
+    this.setState({drawIndicator: null});
+  }
+
+  graphPress = (e) => {
+    const { indicator } = this.props;
+    var press = e.nativeEvent.pageX;
+
+    if (lastTouch <= press - indicator.leniency || lastTouch >= press + indicator.leniency) {
+      lastTouch = press;
+      var closest = this.pointCoor.reduce((prev, curr) => {
+        return (Math.abs(curr.x - press) < Math.abs(prev.x - press) ? curr : prev);
+      });
+      this.setState({drawIndicator: closest});
+    }
+    
+  }
+
   render() {
     const {
       width,
@@ -521,6 +597,18 @@ class LineChart extends AbstractChart {
           width={width - margin * 2 - marginRight}
         >
           <Rect
+            onStartShouldSetResponderCapture={() => true}
+            onMoveShouldSetResponderCapture={() => true}
+            onStartShouldSetResponder={() => true}
+            onMoveShouldSetResponder={() => true}
+            onResponderGrant={this.graphPress} 
+            onResponderReject={() => console.log("Responder rejected")}
+            onResponderMove={this.graphPress}
+            onResponderRelease={this.graphRelease}
+            onResponderTerminationRequest={() => true}
+            onResponderTerminate={() => console.log("Responder terminated")}
+            onMoveShouldSetResponder={() => true}
+
             width="100%"
             height={height + legendOffset}
             rx={borderRadius}
@@ -528,8 +616,10 @@ class LineChart extends AbstractChart {
             fill="url(#backgroundGradient)"
             fillOpacity={transparent ? 0 : 1}
           />
+          
           {this.props.data.legend &&
             this.renderLegend(config.width, legendOffset)}
+            {/* UNDER THE LINE */}
           <G x="0" y={legendOffset}>
             {this.renderDefs({
               ...config,
@@ -591,6 +681,7 @@ class LineChart extends AbstractChart {
                   })
                 : null}
             </G>
+            {/* //LINE */}
             <G>
               {this.renderLine({
                 ...config,
@@ -609,6 +700,8 @@ class LineChart extends AbstractChart {
                   paddingTop
                 })}
             </G>
+            
+
             <G>
               {withDots &&
                 this.renderDots({
@@ -641,6 +734,7 @@ class LineChart extends AbstractChart {
                 })}
             </G>
           </G>
+          {this.renderIndicator(height)}
         </Svg>
         {withScrollableDot && (
           <ScrollView

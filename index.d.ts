@@ -85,7 +85,7 @@ export interface LineChartProps {
   /**
    * Render charts from 0 not from the minimum value. - default: False.
    */
-  fromZero?: boolean;
+  yStart?: number;
   /**
    * Prepend text to horizontal labels -- default: ''.
    */
@@ -185,7 +185,7 @@ export interface LineChartProps {
   /**
    * Array of indices of the data points you don't want to display.
    */
-  hidePointsAtIndex?: number[];
+  hidePointsAtIndex?: object;
   /**
    * This function change the format of the display value of the Y label.
    * Takes the y value as argument and should return the desirable string.
@@ -204,6 +204,10 @@ export interface LineChartProps {
    * The number of horizontal lines
    */
   segments?: number;
+  /**
+   * Draw indicator on graph
+   */
+  indicator?: object;
 }
 
 export class LineChart extends React.Component<LineChartProps> {}
@@ -228,7 +232,7 @@ export interface BarChartProps {
   data: ChartData;
   width: number;
   height: number;
-  fromZero?: boolean;
+  yStart?: number;
   withInnerLines?: boolean;
   yAxisLabel: string;
   yAxisSuffix: string;
